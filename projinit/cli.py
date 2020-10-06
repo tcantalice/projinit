@@ -10,7 +10,8 @@ LICENSES = click.Choice([
 
 
 @click.command()
-@click.option('-p', '--path', default='.', help='Absolute path to location project')
+@click.option(
+    '-p', '--path', default='.', help='Absolute path to location project')
 @click.option(
     '--repo/--no-repo',
     'with_repo',
