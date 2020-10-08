@@ -1,37 +1,70 @@
+#!/usr/bin/python
 import os
-from os import path
 import subprocess
 import shutil
 
-MODULE_DIR = path.dirname(path.abspath(__file__))
+from projinit import utils
 
-FOLDERS = ['tests']
+MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def folders_create(project_name, root='.', database=False, resources=False):
-    """Create folders tree of project"""
-    project_dir = path.join(root, project_name)
 
-    if not path.exists(project_dir):
-        os.mkdir(project_dir)
-        FOLDERS.append(project_name.lower())
+def project_tree(project_name, path='.', **kwargs):
+    project = folder_project(project_name, path)
 
-        for folder in FOLDERS:
-            folder = path.join(project_dir, folder)
-            os.mkdir(folder)
+    subdirs = list()
 
-    return path.abspath(project_dir)
+    if kwargs.get('tests', False):
+        subdirs.append('tests')
+
+    if kwargs.get('docs', False):
+        subdirs.append('docs')
+
+    utils.makedirs(project, subdirs)
+
+    module_name = utils.name_normalizer(project_name)
+
+    if kwargs.get('single_file', False):
+        single_file_module(project, module_name)
+    else:
+        folder_module(project, module_name)
+
+    if kwargs.get('repo', True):
+        init_repo(project)
+
+
+def folder_project(project_name, path='.'):
+    """Create folder of project"""
+    project_dir = os.path.join(path, project_name)
+    if os.path.exists(project_dir):
+        raise FileExistsError(f"'{project_dir}' already exists")
+    os.mkdir(project_dir)
+
+    return os.path.abspath(project_dir)
+
+
+def folder_module(project_path, module_name):
+    """Create module folder"""
+    folder = os.path.join(project_path, module_name)
+    os.mkdir(folder)
+    init_file_name = os.path.join(folder, '__init__.py')
+    with open(init_file_name, 'x'):
+        pass
+
+
+def single_file_module(project_path, module_name):
+    """Create module file"""
+    file_name = os.path.join(project_path, f'{module_name}.py')
+    with open(file_name, 'x'):
+        pass
 
 
 def copy_stubs(project_path=None):
     """Copy stubs to root of project dir"""
     if project_path:
         os.chdir(project_path)
-    stubs_path = path.join(MODULE_DIR, 'stubs')
+    stubs_path = os.path.join(MODULE_DIR, 'stubs')
     shutil.copytree(stubs_path, '.', dirs_exist_ok=True)
-
-
-def virtualenv(py_version): ...
 
 
 def init_repo(project_path=None):
