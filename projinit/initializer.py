@@ -1,12 +1,14 @@
-#!/usr/bin/python
 import os
 import subprocess
 import shutil
 
+import jinja2
+
+import projinit
 from projinit import utils
 
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
-
+TEMPLATE_DIR = os.path.join(MODULE_DIR, 'templates')
 
 
 def project_tree(project_name, path='.', **kwargs):
@@ -37,7 +39,7 @@ def folder_project(project_name, path='.'):
     """Create folder of project"""
     project_dir = os.path.join(path, project_name)
     if os.path.exists(project_dir):
-        raise FileExistsError(f"'{project_dir}' already exists")
+        raise OSError(f"'{project_dir}' already exists")
     os.mkdir(project_dir)
 
     return os.path.abspath(project_dir)
@@ -59,29 +61,50 @@ def single_file_module(project_path, module_name):
         pass
 
 
-def copy_stubs(project_path=None):
-    """Copy stubs to root of project dir"""
-    if project_path:
-        os.chdir(project_path)
-    stubs_path = os.path.join(MODULE_DIR, 'stubs')
-    shutil.copytree(stubs_path, '.', dirs_exist_ok=True)
-
-
-def init_repo(project_path=None):
+def init_repo(project_path):
     """Init a repository on project"""
-    if project_path:
+    if os.curdir != project_path:
         os.chdir(project_path)
     subprocess.run(['git', 'init'])
 
 
-def readme_fill(project_name, project_path=None):
+def readme_fill(
+        project_name, creator_name='', creator_mail='', description='',
+        project_path=None):
     """Fill the README file with project infos"""
-    if project_path:
+
+    template_name = 'readme.j2'
+    dest_template_name = 'README'
+
+    if os.curdir != project_path:
         os.chdir(project_path)
 
-    with open('README', 'r+') as readme:
-        file_text = readme.read()
-        file_text = file_text.replace('<project_name>', project_name)
-        readme.seek(0)
-        readme.write(file_text)
-        readme.truncate()
+    template_path = os.path.join(TEMPLATE_DIR, template_name)
+    dest_path = os.path.join(os.curdir, dest_template_name)
+
+    shutil.copy(template_path, dest_path)
+
+    content = {
+        'project_name': project_name,
+        'creator_name': creator_name,
+        'creator_mail': creator_mail,
+        'description': description,
+        'projinit_name': projinit.name
+    }
+
+    template_fill(dest_path, content)
+
+
+def template_fill(template_name, content):
+    """Fill template with new content"""
+    with open(template_name, 'r+') as template_file:
+        template = jinja2.Template(template_file.read())
+        rendered = template.render(**content)
+
+        template_file = __filewrite(template_file, rendered)
+
+
+def __filewrite(file, content):
+    file.seek(0)
+    file.write(content)
+    file.truncate()
